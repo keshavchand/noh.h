@@ -1,7 +1,4 @@
-#include <stddef.h>
 #include <dlfcn.h>
-#include <stdio.h>
-
 #define _IS_USER_DEFINED(MACRO_NAME) MACRO_NAME
 
 #ifndef FN_IMPL_FLAG
@@ -83,11 +80,10 @@
 
 #define _fnLoadSymbols(ns) \
     fnLoadSymbols##_##ns
-void fnLoadSymbols(FN_NAMESPACE)(const char* tgt) {
+int fnLoadSymbols(FN_NAMESPACE)(const char* tgt) {
     void *tgtHandle = dlopen(tgt, RTLD_NOW);
     if (!tgtHandle) {
-        printf("%s", dlerror());
-        return;
+        return 1;
     }
 
     typedef void (*voidFn) (void);
@@ -97,10 +93,10 @@ void fnLoadSymbols(FN_NAMESPACE)(const char* tgt) {
     for (fn = (voidFn*) _FN_START_SECTION_NAME(FN_NAMESPACE, dynamic_fn), fn_name = _FN_START_SECTION_NAME(FN_NAMESPACE, dynamic_fn_name);
           fn < (voidFn*) _FN_STOP_SECTION_NAME(FN_NAMESPACE, dynamic_fn) && fn_name < _FN_STOP_SECTION_NAME(FN_NAMESPACE, dynamic_fn_name);
           fn++, fn_name++) {
-         printf("Before: %p %s\n", (void*) *fn, (const char*) *fn_name);
          *fn = (voidFn) dlsym(tgtHandle, (const char*) *fn_name);
-         printf("After: %p %s\n", (void*) *fn, (const char*) *fn_name);
     }
+
+    return 0;
 }
 #else
 #define fnLoadSymbols(ns) \
@@ -108,5 +104,7 @@ void fnLoadSymbols(FN_NAMESPACE)(const char* tgt) {
 
 #define _fnLoadSymbols(ns) \
     fnLoadSymbols##_##ns
-void fnLoadSymbols(FN_NAMESPACE)(const char* tgt) {}
+int fnLoadSymbols(FN_NAMESPACE)(const char* tgt) {
+    return 0;
+}
 #endif
